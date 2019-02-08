@@ -94,6 +94,7 @@ final class OktaAwsCliAssumeRole {
         if (currentSession.isPresent() && sessionHelper.sessionIsActive(startInstant, currentSession.get())) {
             RunResult runResult = new RunResult();
             runResult.profileName = currentSession.get().profileName;
+            profileHelper.updateNamedProfileReferences();
             return runResult;
         }
 
@@ -105,6 +106,7 @@ final class OktaAwsCliAssumeRole {
         runResult.accessKeyId = credentials.getAccessKeyId();
         runResult.secretAccessKey = credentials.getSecretAccessKey();
         runResult.sessionToken = credentials.getSessionToken();
+        profileHelper.updateNamedProfileReferences();
 
         return runResult;
     }

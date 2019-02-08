@@ -17,45 +17,40 @@ package com.okta.tools;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class awscli {
     public static void main(String[] args) throws Exception {
         if (LogoutHandler.handleLogout(args)) return;
-      
-        // support named profiles from the CLI
-        // https://docs.aws.amazon.com/cli/latest/userguide/cli-multiple-profiles.html
-        String profile = null;
-        boolean hasProfile = false;
-        for (String arg : args) {
-            if (hasProfile) {
-                profile = arg;
-                break;
-            }
-            hasProfile = "--profile".equals(arg);
-        }
 
-        OktaAwsCliEnvironment environment = OktaAwsConfig.loadEnvironment(profile);
+        OktaAwsCliEnvironment environment = OktaAwsConfig.loadEnvironment(args);
         OktaAwsCliAssumeRole.RunResult runResult = OktaAwsCliAssumeRole.withEnvironment(environment).run(Instant.now());
-        ProcessBuilder awsProcessBuilder = new ProcessBuilder().inheritIO();
 
+        ProcessBuilder awsProcessBuilder = new ProcessBuilder().inheritIO();
         List<String> awsCommand = new ArrayList<>();
-        awsCommand.add("aws");
+        awsCommand.add(getAwsCommandName());
         if (environment.oktaEnvMode) {
             Map<String, String> awsEnvironment = awsProcessBuilder.environment();
             awsEnvironment.put("AWS_ACCESS_KEY_ID", runResult.accessKeyId);
             awsEnvironment.put("AWS_SECRET_ACCESS_KEY", runResult.secretAccessKey);
             awsEnvironment.put("AWS_SESSION_TOKEN", runResult.sessionToken);
-        } else {
-            awsCommand.add("--profile");
-            awsCommand.add(runResult.profileName);
         }
-        awsCommand.addAll(Arrays.asList(args));
+
+        awsCommand.addAll(environment.awsCommandArgs);
         awsProcessBuilder.command(awsCommand);
         Process awsSubProcess = awsProcessBuilder.start();
         int exitCode = awsSubProcess.waitFor();
         System.exit(exitCode);
+    }
+
+    private static String getAwsCommandName() {
+        try {
+            new ProcessBuilder().inheritIO().command("aws.cmd").start().waitFor();
+            return "aws.cmd";
+        }
+        catch(Exception e) {
+            return "aws";
+        }
     }
 }

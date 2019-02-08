@@ -15,8 +15,6 @@
  */
 package com.okta.tools.aws.settings;
 
-import com.okta.tools.OktaAwsCliEnvironment;
-
 import java.io.IOException;
 import java.io.Reader;
 
@@ -28,10 +26,12 @@ import java.io.Reader;
 public class Credentials extends Settings {
 
     // Keys used in aws credentials files
-    static final String ACCES_KEY_ID = "aws_access_key_id";
+    static final String ACCESS_KEY_ID = "aws_access_key_id";
     static final String SECRET_ACCESS_KEY = "aws_secret_access_key";
     static final String SESSION_TOKEN = "aws_session_token";
     static final String AWS_DEFAULT_REGION = "region";
+    private static final String AWS_ROLE_ARN = "role_arn";
+    private static final String AWS_SOURCE_PROFILE = "source_profile";
 
     /**
      * Create a Credentials object from a given {@link Reader}. The data given by this {@link Reader} should
@@ -54,9 +54,17 @@ public class Credentials extends Settings {
      * @param awsSessionToken The session token to use for the profile.
      */
     public void addOrUpdateProfile(String name, String awsAccessKey, String awsSecretKey, String awsRegion, String awsSessionToken) {
-        setProperty(name, ACCES_KEY_ID, awsAccessKey);
+        setProperty(name, ACCESS_KEY_ID, awsAccessKey);
         setProperty(name, SECRET_ACCESS_KEY, awsSecretKey);
         setProperty(name, AWS_DEFAULT_REGION, awsRegion);
         setProperty(name, SESSION_TOKEN, awsSessionToken);
+    }
+
+    public void addOrUpdateReferenceProfile(String name, String roleToAssume, String sourceProfile, String awsRegion) {
+        setProperty(name, AWS_ROLE_ARN, roleToAssume);
+        setProperty(name, AWS_SOURCE_PROFILE, sourceProfile);
+        if(awsRegion != null) {
+            setProperty(name, AWS_DEFAULT_REGION, awsRegion);
+        }
     }
 }

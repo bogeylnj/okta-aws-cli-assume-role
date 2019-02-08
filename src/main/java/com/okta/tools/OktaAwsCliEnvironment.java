@@ -1,5 +1,6 @@
 package com.okta.tools;
 
+import java.util.List;
 import java.util.function.Supplier;
 
 public class OktaAwsCliEnvironment {
@@ -19,16 +20,18 @@ public class OktaAwsCliEnvironment {
     public final String oktaMfaChoice;
     public boolean oktaEnvMode;
 
+    public List<String> awsCommandArgs;
+
     public OktaAwsCliEnvironment()
     {
-        this(false, null, null, null, null, null, null, null, 0, null, null, false);
+        this(false, null, null, null, null, null, null, null, 0, null, null, false, null);
     }
 
     public OktaAwsCliEnvironment(boolean browserAuth, String oktaOrg,
                                  String oktaUsername, Supplier<String> oktaPassword, String oktaCookiesPath,
                                  String oktaProfile, String oktaAwsAppUrl, String awsRoleToAssume,
                                  int stsDuration, String awsRegion,
-                                 String oktaMfaChoice, boolean oktaEnvMode) {
+                                 String oktaMfaChoice, boolean oktaEnvMode, List<String> awsCommandArgs) {
         this.browserAuth = browserAuth;
         this.oktaOrg = oktaOrg;
         this.oktaUsername = oktaUsername;
@@ -41,5 +44,6 @@ public class OktaAwsCliEnvironment {
         this.awsRegion = awsRegion;
         this.oktaMfaChoice = oktaMfaChoice;
         this.oktaEnvMode = oktaEnvMode;
+        this.awsCommandArgs = awsCommandArgs;
     }
 }

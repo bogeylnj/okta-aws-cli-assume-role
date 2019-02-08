@@ -2,10 +2,15 @@ package com.okta.tools.helpers;
 
 import com.amazonaws.auth.BasicSessionCredentials;
 import com.amazonaws.services.securitytoken.model.AssumeRoleWithSAMLResult;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.okta.tools.AwsAccount;
 import com.okta.tools.OktaAwsCliEnvironment;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,5 +55,22 @@ public class ProfileHelper {
         }
 
         return "temp";
+    }
+
+    public void updateNamedProfileReferences() throws IOException {
+        final String DEFAULT_PROFILE_KEY = "default";
+        ObjectMapper mapper = new ObjectMapper();
+        List<AwsAccount> accounts = mapper.readValue(new File("./accounts.json"), new TypeReference<List<AwsAccount>>(){});
+        accounts.forEach(a -> {
+            try {
+                String roleArn = environment.awsRoleToAssume.replaceAll("arn:aws:iam::\\d+", "arn:aws:iam::"+a.number);
+                credentialsHelper.updateNamedProfileReference("credentials", a.name, roleArn, DEFAULT_PROFILE_KEY, null);
+                credentialsHelper.updateNamedProfileReference("credentials", a.alias, roleArn, DEFAULT_PROFILE_KEY, null);
+                credentialsHelper.updateNamedProfileReference("config", a.name, roleArn, DEFAULT_PROFILE_KEY, a.region);
+                credentialsHelper.updateNamedProfileReference("config", a.alias, roleArn, DEFAULT_PROFILE_KEY, a.region);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to update profile:" + a.name, e);
+            }
+        });
     }
 }
