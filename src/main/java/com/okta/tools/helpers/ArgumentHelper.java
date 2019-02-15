@@ -5,7 +5,8 @@ import org.apache.commons.lang.ArrayUtils;
 
 public class ArgumentHelper {
 
-    private static final String USAGE_TEXT = "awscli [-h] [-u <username>] [-p <password>] [--pr <profile>] [-t <timeout>] [<aws-cmd-args>]";
+    private static final String USAGE_TEXT = "awscred [-h] [-u <username>] [-p <password>] [--pr <profile>] [-t <timeout>] [<aws-cmd-args>]" +
+        "\n\n       awscred logout  Force Okta re-authentication\n\n";
     private static final String PROFILE_OPTION_NAME = "--profile";
 
     private ArgumentHelper(){}
