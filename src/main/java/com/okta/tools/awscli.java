@@ -26,7 +26,10 @@ public class awscli {
 
         OktaAwsCliEnvironment environment = OktaAwsConfig.loadEnvironment(args);
         OktaAwsCliAssumeRole.RunResult runResult = OktaAwsCliAssumeRole.withEnvironment(environment).run(Instant.now());
+        runAwsCommand(environment, runResult);
+    }
 
+    private static void runAwsCommand(OktaAwsCliEnvironment environment, OktaAwsCliAssumeRole.RunResult runResult) throws Exception {
         ProcessBuilder awsProcessBuilder = new ProcessBuilder().inheritIO();
         List<String> awsCommand = new ArrayList<>();
         awsCommand.add(getAwsCommandName());
@@ -45,12 +48,20 @@ public class awscli {
     }
 
     private static String getAwsCommandName() {
+        String aws_cmd = "aws.cmd";
         try {
-            new ProcessBuilder().inheritIO().command("aws.cmd").start().waitFor();
-            return "aws.cmd";
+            new ProcessBuilder().command(aws_cmd).start().waitFor();
         }
         catch(Exception e) {
-            return "aws";
+            try {
+                String aws = "aws";
+                new ProcessBuilder().command(aws).start().waitFor();
+                aws_cmd = aws;
+            }
+            catch (Exception e1) {
+                System.exit(0);
+            }
         }
+        return aws_cmd;
     }
 }
