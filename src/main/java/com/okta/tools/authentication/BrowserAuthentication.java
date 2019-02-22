@@ -1,8 +1,10 @@
 package com.okta.tools.authentication;
 
+import com.amazonaws.util.IOUtils;
 import com.okta.tools.OktaAwsCliEnvironment;
 import com.okta.tools.helpers.CookieHelper;
 import com.okta.tools.util.NodeListIterable;
+import com.sun.javafx.webkit.WebConsoleListener;
 import javafx.application.Application;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -14,10 +16,11 @@ import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import sun.net.www.protocol.https.HttpsURLConnectionImpl;
 
 import javax.annotation.Nonnull;
-import java.io.IOException;
-import java.net.URI;
+import java.io.*;
+import java.net.*;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -59,6 +62,11 @@ public final class BrowserAuthentication extends Application {
 
         URI uri = URI.create(ENVIRONMENT.oktaAwsAppUrl);
         initializeCookies(uri);
+
+        registerCustomProtocolHandler();
+        WebConsoleListener.setDefaultListener((webView, message, lineNumber, sourceId) -> {
+            System.out.println("JSConsoleListener: " + message + "[at " + lineNumber + "]");
+        });
 
         webEngine.getLoadWorker().stateProperty()
                 .addListener((ov, oldState, newState) -> {
@@ -151,5 +159,64 @@ public final class BrowserAuthentication extends Application {
         samlResponse.set(samlResponseForAws);
         stage.close();
         USER_AUTH_COMPLETE.countDown();
+    }
+
+    /** https://stackoverflow.com/questions/52572853/failed-integrity-metadata-check-in-javafx-webview-ignores-systemprop
+    *
+    * javaFX.WebEngine with >1.8.0._162 cannot handle "integrity=" (attribute &lt;link&gt; or &lt;script&gt;) checks on files retrievals properly.
+    * This custom stream handler will disable the integrity checks by replacing "integrity=" and "integrity =" with a "integrity.disabled" counterpart
+    * This is very susceptible to breaking if Okta changes the response body again as we are making changes based on the format of the characters in their response
+    */
+    private void registerCustomProtocolHandler() {
+        try {
+            URL.setURLStreamHandlerFactory(new URLStreamHandlerFactory() {
+                @Override
+                public URLStreamHandler createURLStreamHandler(String protocol) {
+                    if ("https".equals(protocol)) {
+                        return new sun.net.www.protocol.https.Handler() {
+                            @Override
+                            protected URLConnection openConnection(URL url, Proxy proxy) throws IOException {
+                                // Leaving sysout comments here for debugging and clarity if the tool does break again because of an Okta Update
+                                //System.out.format("openConnection %s (%s, %s)\n", url, url.getHost(), url.getPath());
+
+                                final HttpsURLConnectionImpl httpsURLConnection = (HttpsURLConnectionImpl) super.openConnection(url, proxy);
+                                if ("artisan.okta.com".equals(url.getHost()) && "/home/amazon_aws/0oad7khqw5gSO701p0x7/272".equals(url.getPath())) {
+
+                                    return new URLConnection(url) {
+                                        @Override
+                                        public void connect() throws IOException {
+                                            httpsURLConnection.connect();
+                                        }
+
+                                        public InputStream getInputStream() throws IOException {
+                                            byte[] content = IOUtils.toByteArray(httpsURLConnection.getInputStream());
+                                            String contentAsString = new String(content, "UTF-8");
+
+                                            //System.out.println("########################## got stream content ##############################");
+                                            //System.out.println(contentAsString);
+                                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                            baos.write(contentAsString.replaceAll("integrity ?=", "integrity.disabled=").getBytes("UTF-8"));
+                                            return new ByteArrayInputStream(baos.toByteArray());
+                                        }
+
+                                        public OutputStream getOutputStream() throws IOException {
+                                            return httpsURLConnection.getOutputStream();
+                                        }
+
+                                    };
+
+                                } else {
+                                    return httpsURLConnection;
+                                }
+                            }
+
+                        };
+                    }
+                    return null;
+                }
+            });
+        } catch (Throwable t) {
+            System.out.println("Unable to register custom protocol handler");
+        }
     }
 }
