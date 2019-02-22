@@ -12,6 +12,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.stage.Stage;
+import org.apache.logging.log4j.LogManager;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -27,6 +28,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 public final class BrowserAuthentication extends Application {
+    private static final org.apache.logging.log4j.Logger logger = LogManager.getLogger(BrowserAuthentication.class);
+
     // Trade-off: JavaFX app model makes interacting with UI state challenging
     // Experienced JavaFX devs welcomed to suggest solutions to this
     private static final CountDownLatch USER_AUTH_COMPLETE = new CountDownLatch(1);
@@ -65,34 +68,35 @@ public final class BrowserAuthentication extends Application {
 
         registerCustomProtocolHandler();
         WebConsoleListener.setDefaultListener((webView, message, lineNumber, sourceId) -> {
-            System.out.println("JSConsoleListener: " + message + "[at " + lineNumber + "]");
+            logger.debug("JSConsoleListener: " + message + "[at " + lineNumber + "]");
         });
 
         webEngine.getLoadWorker().stateProperty()
-                .addListener((ov, oldState, newState) -> {
-                    if (webEngine.getDocument() != null) {
-                        checkForAwsSamlSignon(stage, webEngine);
-                        stage.setTitle(webEngine.getLocation());
-                    }
-                });
+            .addListener((ov, oldState, newState) -> {
+                logger.debug(String.format("state(%s => %s)\n\t%s\n\t%s\n", oldState, newState, webEngine.getLocation(), webEngine.getUserAgent()));
+                if (webEngine.getDocument() != null) {
+                    checkForAwsSamlSignon(stage, webEngine);
+                    stage.setTitle(webEngine.getLocation());
+                }
+            });
 
         webEngine.getLoadWorker().exceptionProperty()
             .addListener((ov, oldState, newState) -> {
-                System.out.format("exception(%s => %s)\n%s\n", oldState, newState, webEngine.getLoadWorker().getException());
+                logger.error(String.format("exception(%s => %s)\n", oldState, newState), webEngine.getLoadWorker().getException());
             });
 
+        logger.debug("LOADING " + uri.toASCIIString());
         webEngine.load(uri.toASCIIString());
 
         scene.setRoot(scrollPane);
-
         stage.setScene(scene);
         stage.show();
     }
 
     private void initializeCookies(URI uri) throws IOException {
         Map<String, List<String>> headers = cookieHelper.loadCookieHeaders();
-        java.net.CookieHandler.setDefault(new CookieManager(cookieHelper));
-        java.net.CookieHandler.getDefault().put(uri, headers);
+        CookieHandler.setDefault(new CookieManager(cookieHelper));
+        CookieHandler.getDefault().put(uri, headers);
     }
 
     private void checkForAwsSamlSignon(Stage stage, WebEngine webEngine) {
@@ -162,11 +166,11 @@ public final class BrowserAuthentication extends Application {
     }
 
     /** https://stackoverflow.com/questions/52572853/failed-integrity-metadata-check-in-javafx-webview-ignores-systemprop
-    *
-    * javaFX.WebEngine with >1.8.0._162 cannot handle "integrity=" (attribute &lt;link&gt; or &lt;script&gt;) checks on files retrievals properly.
-    * This custom stream handler will disable the integrity checks by replacing "integrity=" and "integrity =" with a "integrity.disabled" counterpart
-    * This is very susceptible to breaking if Okta changes the response body again as we are making changes based on the format of the characters in their response
-    */
+     *
+     * javaFX.WebEngine with >1.8.0._162 cannot handle "integrity=" (attribute &lt;link&gt; or &lt;script&gt;) checks on files retrievals properly.
+     * This custom stream handler will disable the integrity checks by replacing "integrity=" and "integrity =" with a "integrity.disabled" counterpart
+     * This is very susceptible to breaking if Okta changes the response body again as we are making changes based on the format of the characters in their response
+     */
     private void registerCustomProtocolHandler() {
         try {
             URL.setURLStreamHandlerFactory(new URLStreamHandlerFactory() {
@@ -195,6 +199,7 @@ public final class BrowserAuthentication extends Application {
                                             //System.out.println("########################## got stream content ##############################");
                                             //System.out.println(contentAsString);
                                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                            //contentAsString = contentAsString.replaceAll(",\"ENG_ENABLE_SCRIPT_INTEGRITY\"", ""); // nested SRIs?
                                             baos.write(contentAsString.replaceAll("integrity ?=", "integrity.disabled=").getBytes("UTF-8"));
                                             return new ByteArrayInputStream(baos.toByteArray());
                                         }
