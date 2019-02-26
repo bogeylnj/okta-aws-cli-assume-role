@@ -1,201 +1,119 @@
-# Okta AWS CLI Assume Role tool
+# AWS CLI
 
- :information_source: **Disclaimer:** This tool is community-supported and is maintained by members of the Okta team for developers and IT professionals. This tool is not an official Okta product and does not qualify for any Okta support. Anyone who chooses to use this tool must ensure that their implementation meets any applicable legal obligations including any Okta terms and conditions.
+The Artisan `awscred` allows us to take advantage of Okta to use the AWS Command Line Interface without relying on permanent AWS keys.  Okta provided an open-source project on Github as an example implementation, and we have enhanced it to meet our needs for interacting with AWS services from the command line as well as via batch and automation.
 
-New to Amazon Web Services with Okta? **Start with the [Configuring AWS in Okta](#configuring-aws-in-okta).
+The original Github project is here - https://github.com/oktadeveloper/okta-aws-cli-assume-role
 
-This tool has been verified to work on macOS Sierra, High Sierra, Windows Server 2012 R2, Windows 10, and Ubuntu 16.04 LTS, and is expected to work on other Linux systems as well.
+More information about this app is on the Wiki @ http://wiki/display/PROJ/AWS+CLI
 
-- [Installation](#installation)
-- [Usage](#usage)
-- [Compiling the application](#compiling-the-application)
-    - [Prerequisites](#prerequisites)
-    - [Building on the command line](#building-on-the-command-line)
-    - [Opening the project with IntelliJ Idea](#opening-the-project-with-intellij-idea)
-- [Configuring AWS in Okta](#configuring-aws-in-okta)
-- [Configuring the application](#configuring-the-application)
-- [History](#history)
-    - [Wrap AWS CLI with session resumption (2017/12/5 update)](#wrap-aws-cli-with-session-resumption-2017125-update)
-    - [Add config.properties parameters to support silent mode without prompt for user input (2017/6/8 update)](#add-configproperties-parameters-to-support-silent-mode-without-prompt-for-user-input-201768-update)
-    - [AWS:reInvent Release (2016/11/29 update)](#awsreinvent-release-20161129-update)
-- [Troubleshooting](#troubleshooting)
-    - [I get "You have no factors enrolled"](#i-get-you-have-no-factors-enrolled)
-    - [I have Duo, but I get "None of your factors are supported"](#i-have-duo-but-i-get-none-of-your-factors-are-supported)
-- [Getting help](#getting-help)
-- [License](#license)
+### Use Cases
+- User at command line terminal
+- ServiceAccounts running automation (ActiveBatch, Bamboo, etc)
 
-## Installation
 
-### Windows
+# Tool Details
 
-1. Run the following in a [PowerShell console](http://technet.microsoft.com/library/hh831491.aspx#start-windows-powershell)
-    ```pwsh
-    Set-ExecutionPolicy -Scope Process -ExecutionPolicy unrestricted -Force; Invoke-Expression ((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/oktadeveloper/okta-aws-cli-assume-role/master/bin/Install-OktaAwsCli.ps1')); .$profile
-    ```
-2. Customize **%userprofile%\\.okta\\config.properties** and set **OKTA_ORG** and **OKTA_AWS_APP_URL** appropriately. For example,
-   ```properties
-   OKTA_ORG=acmecorp.oktapreview.com
-   OKTA_AWS_APP_URL=https://acmecorp.oktapreview.com/home/amazon_aws/0oa5zrwfs815KJmVF0h7/137
-   ```
+### Execution
+`awscred` will authenticate the User via username/password entry on the command line or using browser authentication 
+(enabled by default, requires ArtisanCA cert). After authenticated, `awscred` will populate Artisan accounts into AWS Named Profiles in 
+`%userprofile%\.aws\credentials|config`. This allows for easy RoleChaining, but restricts timeouts to 1hr on chained 
+Roles.
 
-### macOS/Linux
 
-1. Run the following in a Terminal, optionally setting a custom
-   `PREFIX` value (default: `~/.okta`):
+`awscred` 2.0 will can run an `aws` cli command after completing the authentication process. If one is not provided, it will default to running `sts get-user-identity`, so you can run it both ways
+- `awscred` or 
+- `awscred --profile dev s3 ls` (e.g.)
 
-    ```bash
-    PREFIX=~/.okta bash <(curl -fsSL https://raw.githubusercontent.com/oktadeveloper/okta-aws-cli-assume-role/master/bin/install.sh) -i
-    ```
 
-2. Customize **~/.okta/config.properties** and set **OKTA_ORG** and **OKTA_AWS_APP_URL** appropriately. For example,
-   
-   ```properties
-   OKTA_ORG=acmecorp.oktapreview.com
-   OKTA_AWS_APP_URL=https://acmecorp.oktapreview.com/home/amazon_aws/0oa5zrwfs815KJmVF0h7/137
-   ```
-3. Make sure **/usr/local/bin** (or whatever $PREFIX/bin is) is in your PATH
+### Timeouts
+Initial AssumeRole keys are "extended timeout" ready and you can set the timeout for the (15min-12hours), however RoleChaining timeouts are still limited by AWS, so `--profile dev` will do AssumeRole to a Role in the DEV account and this is still capped at 1hour
 
-### Docker
+### Caching
+- okta caches authentication
+- aws cli caches AssumeRole to named profiles `/.aws/cli/cache`
 
-1. Copy `config.properties` to `~/.okta/config.properties` and set **OKTA_ORG** and **OKTA_AWS_APP_URL** appropriately. For example,
-   
-   ```properties
-   OKTA_ORG=acmecorp.oktapreview.com
-   OKTA_AWS_APP_URL=https://acmecorp.oktapreview.com/home/amazon_aws/0oa5zrwfs815KJmVF0h7/137
-   ```
-2. Run this command:
-   ```shell
-   docker run -v ~/.okta/config.properties:/root/.okta/config.properties -it tomsmithokta/okta-awscli-java
-   ```
+### Java Security Limitations
+1. SSO - `OKTA_BROWSER_AUTH=true` gives the tool the ability to open an embedded an OpenFX webkit browser and utlize Okta's loging dialogs to authenticate Users. Java versions >1.8.0_192->_202] have disabled the embedded browsers ability to pull credentials from the environment. (Could be Java/OpenFX/other causing this)
+2. JS SRI - Java/OpenFX versions >1.8.0_162 can not handle JS resource `integrity` attributes (verify the hashcoe of the resource file). Okta introduced this with OktaServer version 2019.2+ (we observed break on 20190221). We able to introduce a hack "workaround" to strip out these integrity checks before rendering. We supplied this code to the okta-aws-cli guy and he worked it into v1.0.9 which we have not merged yet
 
-Read more at [@tom-smith-okta's okta-awscli-java Docker repo](https://hub.docker.com/r/tomsmithokta/okta-awscli-java/).
 
-### Manual install
 
-Create a `.okta` directory in your home directory. For example, `~/.okta`.
+# Deployment / Publishing
+Buid by running `mvn package` - generates `target/okta-aws-cli-<version>.jar`
 
-Download the latest release JAR and put it in `.okta`:
-https://github.com/oktadeveloper/okta-aws-cli-assume-role/releases
+Publish: 
+> The following files should be included in install package for Software Center
+- `awscred.bat` (update to match `okta-aws-cli` version)
+- `config.properties`
+- `okta-aws-cli-<version>.jar`
+- `accounts.json` (artisan account mapping for AWS Named Profile references)
+- `log4j2.xml`
 
-Copy `config.properties` to `~/.okta/config.properties` and set
-**OKTA_ORG** and **OKTA_AWS_APP_URL** appropriately. For example,
 
-```properties
-OKTA_ORG=acmecorp.oktapreview.com
-OKTA_AWS_APP_URL=https://acmecorp.oktapreview.com/home/amazon_aws/0oa5zrwfs815KJmVF0h7/137
-```
+# Features
+- Merge latest code from `upstream` repo
+- PRD/SBX okta URL handling
+    - `config.properties` location override?
+    - cmd line option for all config file options?
+- `-u/-p` should disable browser auth (srv accounts)
+- stdout session expiration
+- Timeouts on destination Roles
+- SSO
+- SCCM / Java install with cert more reliable (remove override in `awscred.bat`)
+- OKTA_ENV_MODE - don't write keys anywhere, just hold in memory and call `aws` command only through `okta-cli`
 
-Create `~/.okta/logging.properties` with the following content,
 
-```properties
-com.amazonaws.auth.profile.internal.BasicProfileConfigLoader = NONE
-```
+# Release Notes
+### awscred-2.0
+20190225
+- Pull down new code base for `okta-aws-cli-assue-role`
+- Implement our current awscred workflow into this new code base
+    - Add command line options
+    - Generate AWS Named profiles in the AWS configuration files
+- Enable Browser Authentication & App-Level MFA
+- Add code to prep for a future release to add extended timeouts and SSO (AWS RoleChaining and java security limitations currently)
 
-Copy scripts from `.okta/bin` to somewhere on your PATH.
+___
+### awscred-1.0
+20180613
+- Use FIRST INLINE policy as default identity role policy with which to assume other account roles
 
-## Usage
-
-Verify your setup with a simple command:
-
-```bash
-okta-aws test sts get-caller-identity
-```
-
-This will prompt for Okta credentials, log you into AWS, let you pick a role, and store a session profile called **test** for you.
-
-Run the program again to see session resumption (you won't be asked for Okta credentials until the session expires):
-
-```bash
-okta-aws test sts get-caller-identity
-```
-
-NOTE: **okta-aws** is a function loaded from your shell profile, not a typical program or command stored in a file.
-
-## Reference
-* [okta-listroles(1)](docs/man/okta-listroles.1.md)
-* [okta-credential_process(1)](docs/man/okta-credential_process.1.md)
-
-## Compiling the application
-
-The application was built and compiled with [JetBrains' IntelliJ IDEA](https://www.jetbrains.com/idea/). Note that you don't have to compile the application in order to be able to execute it, since the compiled executable (a JAR file) is available [on GitHub](https://github.com/oktadeveloper/okta-aws-cli-assume-role/releases).
-
-### Prerequisites
-First of all, it goes without saying that you will need to install the [Java SE 8x](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or the [Java JDK 8x](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html).
-
-Then you will need [Maven 2 or later](https://maven.apache.org/install.html) to run the build.
-
-### Building on the command line
-
-Get a single JAR with all dependencies:
-
-Use ```git clone https://github.com/oktadeveloper/okta-aws-cli-assume-role.git``` to clone the repository locally. Then, build with Maven:
-
-```bash
-mvn package
-cp target/okta-aws-cli-*.jar out/oktaawscli.jar
-```
-
-### Opening the project with IntelliJ Idea
-
-- Open the IntelliJ Idea IDE and browse to the ```okta-aws-cli-assume-role``` folder you have cloned from GitHub inside the ```Projects``` folder.
-- Go to ```File => Project Structure``` and in the Libraries menu, fix the Java references that don't match your local setup.
-- Go to ```Build => Make Project``` in order to compile the project.
-- The project also builds the JAR artifact, so if you browse to the ```out``` sub-folder, you will see the ```oktaawscli.jar``` JAR artifact.
-- Make sure the ```awscli.command``` file is in the ```out``` sub-folder.
-
-## Configuring AWS in Okta
-
-[Integrating the Amazon Web Services Command Line Interface Using Okta](https://support.okta.com/help/Documentation/Knowledge_Article/Integrating-the-Amazon-Web-Services-Command-Line-Interface-Using-Okta). 
-
-## Configuring the application
-Here is the list of parameters that can be environment variables or settings in the ```~/.okta/config.properties``` file:
+20180411
+- add profiles to `.aws/credentials`, as well (for SDKs)
+- add all new account profiles and abbreviations (leave nonproduction|nonprd in place)
+- changed property file name to `awscred.properties` (`config.properties` also accepted)
+- `.aws/config` (CLI)- change sandbox to default to us-east-1, unlike all other accounts
+- added "Testing" and "Deployment / Publishing" sections to Readme above
   
-  - ```OKTA_ORG``` which is the url of your Okta org (starting with https://).
-  - ```OKTA_AWS_APP_URL``` is the url link of your Okta AWS application url (see below for more info) 
-  - ```OKTA_USERNAME``` is the username to use. If present will skip username input.
-  - ```OKTA_PASSWORD_CMD``` is the command to fetch your password instead of showing a password prompt. [Read more...](docs/OKTA_PASSWORD_CMD.md)
-  - ```OKTA_ENV_MODE``` set to **true** to run sub-command with **AWS_ACCESS_KEY_ID**, **AWS_SECRET_ACCESS_KEY**, and **AWS_SESSION_TOKEN** env vars set. Temporary credentials are shared in memory and kept off disk in this mode. (default: **false**)
-  - ```OKTA_BROWSER_AUTH``` set to **true** to use integrated web browser for authentication (default: **false**)
-  - ```OKTA_COOKIES_PATH``` is directory path to store cookies.properties for Okta. This is particularly useful when running this tool in many concurrent processes like you might with **OKTA_ENV_MODE** (default: ~/.okta)
-  - ```OKTA_PROFILE``` is the name of the AWS profile to create/reuse.  May also be specified on the commandline by ```--profile```. (default: get AWS profile name based on per-session STS user name)  
-  - ```OKTA_AWS_REGION``` is the default AWS region to store with the created profile.
-  - ```OKTA_AWS_ROLE_TO_ASSUME``` is the IAM Role ARN to use. If present will try to match okta account's retrieved role list and use it. Will still prompt if no match found. (ex: **arn:aws:iam::123456789012:role/EC2-Admins**)
-  - ```OKTA_STS_DURATION``` is the duration the role will be assumed, in seconds. The maximum session duration allowed by AWS is 12 hours and this needs to be set on the role as well.  Defaults to 1hr.
-  - ```OKTA_MFA_CHOICE``` is the provider and factor type to use if prompted for MFA.  Example: ```OKTA.push```. See [Factors documentation](https://developer.okta.com/docs/api/resources/factors#factor-type) for values. (default: use single factor or prompt user to select from usable factors).
-  
-  - **Obtaining the AWS app url**
-    - Navigate to the ```Admin Dashboard``` of you Okta organization
-    - Select the ```Applications``` tab and click on your AWS Application 
-    - Under the ```General``` menu, scroll down to find the ```App Embed Link``` section 
-    - Your link is located under ```EMBED LINK``` 
-  - Replace the example values in ```config.properties``` with your values
 
-Note: environment variables take precedence over the config file.
+20170809
+- Added Maven support to allow users to rebuild project without IDEA.  Type in 'mvn target' to build complete application.
+- Created single jar with all dependencies bundled-in to simplify deployment and manage dependencies
+- Modified code to allow for command line switches to leverage utility via batch as well as console.
+- Added defaults for MFA and user login based on usage pattern
+- Added feature to create profiles for all of our AWS accounts to simplify switching between AWS accounts
 
-## Troubleshooting
 
-### I get "You have no factors enrolled"
 
-This means that MFA is enforced, but you have no factors enrolled on your user.
 
-You should enrol a CLI-supported factor (all except Duo as far as I know).
+# Testing
+Test CLI
+- need to set region per profile, can't use default
 
-If you are using Duo Push, consider setting **OKTA_BROWSER_AUTH=true** in [the configuration](#configuring-the-application).
+Test an SDK (powershell) (defaults to identity profile)
+- need to set default region (used as default for all named credentials.profiles)
+- can't override default region on credentials.profiles
 
-### I have Duo, but I get "None of your factors are supported"
-
-This means that MFA is enforced, but none of the factors you have enrolled are supported.
-
-Okta's integration with Duo requires an iframe which isn't practical to interact with from a CLI context. 
-
-## Getting help
-Have a question or see a bug? Post a question on the [Okta Dev Forums](https://devforum.okta.com/) or email developers@okta.com. For feature requests, feel free to open an issue on this repo.
-
-If you find a security vulnerability, please follow our [Vulnerability Reporting Process](https://www.okta.com/vulnerability-reporting-policy/).
-
-## License
-Copyright 2017 Okta, Inc. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+### Features to Test
+- Args/Overrides(username, password, timeout, )
+    commons-cli
+        - options = configured things that are parsed
+        - args = all other values on the command line
+        ** set to stop parsing options at first sign of arg (e.g., -opt1 a --opt2 b arg1 --arg2 arg3)
+        ** optional options are null if not passed (e.g., no --profile = null)
+- Build credential, config files for all accounts 
+    - use property file for account list
+- Need testing User
+    - ??? default FIRST INLINE POLICY
+    - ??? z_account when using integratedAuthentication
+    - ??? Multiple Roles vs auto-select only Role
