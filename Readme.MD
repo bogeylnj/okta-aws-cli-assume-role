@@ -64,7 +64,7 @@ Publish:
 
 
 # Release Notes
-### awscred-2.0
+### awscred-2.0 | [JIRA](https://jira.artisanpartners.com/browse/AWSAD-150) | [DecisionRecord/Notes](https://paper.dropbox.com/doc/IAM-Role-STS-Timeout-Values-ddr--AYMRLuko05xXb1kaBnSPgh10Ag-ckxz9cDNNUr5b7sWlditI)
 20190225
 - Pull down new code base for `okta-aws-cli-assue-role`
 - Implement our current awscred workflow into this new code base
