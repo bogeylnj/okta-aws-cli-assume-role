@@ -66,6 +66,7 @@ Publish:
     - `config.properties` location override?
     - cmd line option for all config file options?
 - `-u/-p` should disable browser auth (srv accounts)
+- `-u/-p` are nice fallback/usable options for some Users
 - stdout session expiration
 - Timeouts on destination Roles
 - SSO
