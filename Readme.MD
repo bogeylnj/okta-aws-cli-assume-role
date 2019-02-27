@@ -1,13 +1,14 @@
 # AWS CLI
 
-The Artisan `awscred` allows us to take advantage of Okta to use the AWS Command Line Interface without relying on permanent AWS keys.  Okta provided an open-source project on Github as an example implementation, and we have enhanced it to meet our needs for interacting with AWS services from the command line as well as via batch and automation.
+The Artisan `awscred` allows us to take advantage of Okta to use the AWS Command Line Interface without relying on 
+permanent AWS keys.  Okta provided an open-source project on Github as an example implementation, and we have enhanced 
+it to meet our needs for interacting with AWS services from the command line as well as via batch and automation.
 
-The original Github project is here - https://github.com/oktadeveloper/okta-aws-cli-assume-role
-
-More information about this app is on the Wiki @ http://wiki/display/PROJ/AWS+CLI
+- [Okta's Github project](https://github.com/oktadeveloper/okta-aws-cli-assume-role)
+- [awscred Artisan wiki page](https://wiki/display/PROJ/AWS+F+I+-+awscred)
 
 ### Use Cases
-- User at command line terminal
+- User at command line terminal (Windows, Mac/Linux)
 - ServiceAccounts running automation (ActiveBatch, Bamboo, etc)
 
 
@@ -20,21 +21,29 @@ More information about this app is on the Wiki @ http://wiki/display/PROJ/AWS+CL
 Roles.
 
 
-`awscred` 2.0 will can run an `aws` cli command after completing the authentication process. If one is not provided, it will default to running `sts get-user-identity`, so you can run it both ways
+`awscred` 2.0 will can run an `aws` cli command (if installed) after completing the authentication process. If one is not provided, it 
+will default to running `sts get-user-identity`, so you can run it both ways
 - `awscred` or 
 - `awscred --profile dev s3 ls` (e.g.)
 
 
 ### Timeouts
-Initial AssumeRole keys are "extended timeout" ready and you can set the timeout for the (15min-12hours), however RoleChaining timeouts are still limited by AWS, so `--profile dev` will do AssumeRole to a Role in the DEV account and this is still capped at 1hour
+Initial AssumeRole keys are "extended timeout" ready and you can set the timeout for the (15min-12hours), however 
+RoleChaining timeouts are still limited by AWS, so `--profile dev` will do AssumeRole to a Role in the DEV account and 
+this is still capped at 1hour
 
 ### Caching
 - okta caches authentication
 - aws cli caches AssumeRole to named profiles `/.aws/cli/cache`
 
 ### Java Security Limitations
-1. SSO - `OKTA_BROWSER_AUTH=true` gives the tool the ability to open an embedded an OpenFX webkit browser and utlize Okta's loging dialogs to authenticate Users. Java versions >1.8.0_192->_202] have disabled the embedded browsers ability to pull credentials from the environment. (Could be Java/OpenFX/other causing this)
-2. JS SRI - Java/OpenFX versions >1.8.0_162 can not handle JS resource `integrity` attributes (verify the hashcoe of the resource file). Okta introduced this with OktaServer version 2019.2+ (we observed break on 20190221). We able to introduce a hack "workaround" to strip out these integrity checks before rendering. We supplied this code to the okta-aws-cli guy and he worked it into v1.0.9 which we have not merged yet
+1. SSO - `OKTA_BROWSER_AUTH=true` gives the tool the ability to open an embedded an OpenFX webkit browser and utlize 
+Okta's loging dialogs to authenticate Users. Java versions >1.8.0_192->_202] have disabled the embedded browsers ability
+ to pull credentials from the environment. (Could be Java/OpenFX/other causing this)
+2. JS SRI - Java/OpenFX versions >1.8.0_162 can not handle JS resource `integrity` attributes (verify the hashcoe of the
+ resource file). Okta introduced this with OktaServer version 2019.2+ (we observed break on 20190221). We able to 
+ introduce a hack "workaround" to strip out these integrity checks before rendering. We supplied this code to the 
+ okta-aws-cli guy and he worked it into v1.0.9 which we have not merged yet
 
 
 
@@ -50,8 +59,9 @@ Publish:
 - `log4j2.xml`
 
 
-# Features
+# Features Backlog (2.1 fix version)
 - Merge latest code from `upstream` repo
+- remove 'aws.cmd' check, causes Mac error messages (find root cause for needing this)
 - PRD/SBX okta URL handling
     - `config.properties` location override?
     - cmd line option for all config file options?
