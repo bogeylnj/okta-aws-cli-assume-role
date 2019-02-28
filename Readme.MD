@@ -5,7 +5,13 @@ permanent AWS keys.  Okta provided an open-source project on Github as an exampl
 it to meet our needs for interacting with AWS services from the command line as well as via batch and automation.
 
 - [Okta's Github project](https://github.com/oktadeveloper/okta-aws-cli-assume-role)
-- [awscred Artisan wiki page](https://wiki/display/PROJ/AWS+F+I+-+awscred)
+
+### Artisan Project Resources
+[Wiki](https://wiki/display/PROJ/AWS+F+I+-+awscred) 
+| [2.0 Decision Record](https://paper.dropbox.com/doc/IAM-Role-STS-Timeout-Values-ddr--AYMRLuko05xXb1kaBnSPgh10Ag-ckxz9cDNNUr5b7sWlditI)
+| [Artifact](http://milmvnrepo01:8081/nexus/content/repositories/releases/com/artisan/okta-aws-cli/) 
+| [TestRail](https://wiki/display/PROJ/AWS+F+I+-+awscred) 
+| [Pipeline](https://bamboo.artisanpartners.com/browse/IN-AWSCRED)
 
 ### Use Cases
 - User at command line terminal (Windows, Mac/Linux)
