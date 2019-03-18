@@ -13,6 +13,7 @@ it to meet our needs for interacting with AWS services from the command line as 
 | [TestRail](https://wiki/display/PROJ/AWS+F+I+-+awscred) 
 | [Pipeline](https://bamboo.artisanpartners.com/browse/IN-AWSCRED)
 
+
 ### Use Cases
 - User at command line terminal (Windows, Mac/Linux)
 - ServiceAccounts running automation (ActiveBatch, Bamboo, etc)
@@ -68,6 +69,8 @@ Publish:
 # Features Backlog (2.1 fix version)
 - Merge latest code from `upstream` repo
 - remove 'aws.cmd' check, causes Mac error messages (find root cause for needing this)
+- identity account pattern changes (no role chaining AND still legacy id-account role-chaining)
+- error when no `accounts.json` - could be okay, just spit out warning message and move on
 - PRD/SBX okta URL handling
     - `config.properties` location override?
     - cmd line option for all config file options?

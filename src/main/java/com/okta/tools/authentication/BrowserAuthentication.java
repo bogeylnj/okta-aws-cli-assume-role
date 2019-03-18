@@ -67,9 +67,7 @@ public final class BrowserAuthentication extends Application {
         initializeCookies(uri);
 
         registerCustomProtocolHandler();
-        WebConsoleListener.setDefaultListener((webView, message, lineNumber, sourceId) -> {
-            logger.debug("JSConsoleListener: " + message + "[at " + lineNumber + "]");
-        });
+        WebConsoleListener.setDefaultListener((webView, message, lineNumber, sourceId) -> logger.debug("JSConsoleListener: " + message + "[at " + lineNumber + "]"));
 
         webEngine.getLoadWorker().stateProperty()
             .addListener((ov, oldState, newState) -> {
@@ -81,9 +79,7 @@ public final class BrowserAuthentication extends Application {
             });
 
         webEngine.getLoadWorker().exceptionProperty()
-            .addListener((ov, oldState, newState) -> {
-                logger.error(String.format("exception(%s => %s)\n", oldState, newState), webEngine.getLoadWorker().getException());
-            });
+            .addListener((ov, oldState, newState) -> logger.error(String.format("exception(%s => %s)\n", oldState, newState), webEngine.getLoadWorker().getException()));
 
         logger.debug("LOADING " + uri.toASCIIString());
         webEngine.load(uri.toASCIIString());
@@ -184,7 +180,8 @@ public final class BrowserAuthentication extends Application {
                                 //System.out.format("openConnection %s (%s, %s)\n", url, url.getHost(), url.getPath());
 
                                 final HttpsURLConnectionImpl httpsURLConnection = (HttpsURLConnectionImpl) super.openConnection(url, proxy);
-                                if ("artisan.okta.com".equals(url.getHost()) && "/home/amazon_aws/0oad7khqw5gSO701p0x7/272".equals(url.getPath())) {
+                                if (ENVIRONMENT.oktaOrg.equals(url.getHost())
+                                    && ENVIRONMENT.oktaAwsAppUrl.replaceAll(".*"+ENVIRONMENT.oktaOrg, "").equals(url.getPath())) {
 
                                     return new URLConnection(url) {
                                         @Override
